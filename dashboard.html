@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard การอ่านออกเขียนได้</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+        .stat-card { background: white; border-radius: 1rem; padding: 1.25rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f3f4f6; }
+        .section-header { font-size: 1.125rem; font-weight: 700; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        
+        .color-fluent { color: #22c55e; } .bg-fluent { background-color: #22c55e; } /* คล่อง - เขียว */
+        .color-pass { color: #3b82f6; } .bg-pass { background-color: #3b82f6; } /* ได้ - น้ำเงิน */
+        .color-fail { color: #ef4444; } .bg-fail { background-color: #ef4444; } /* ไม่ได้ - แดง */
+    </style>
+</head>
+<body class="pb-20 text-gray-800">
+
+    <div class="bg-blue-600 text-white p-6 rounded-b-3xl shadow-lg mb-6 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <img src="https://img2.pic.in.th/4d3a830f3eb506411.png" class="w-12 h-12 bg-white rounded-full p-1 shadow">
+                <div>
+                    <h1 class="text-xl font-bold leading-tight">Dashboard การอ่านออกเขียนได้</h1>
+                    <p class="text-sm text-blue-200">ตามเกณฑ์ประเมินระดับสถานศึกษา</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-2 w-full md:w-auto bg-white bg-opacity-20 p-2 rounded-xl backdrop-blur-sm">
+                <select id="filterGrade" onchange="applyGradeFilter()" class="px-3 py-2 rounded-lg text-sm text-blue-900 font-bold outline-none cursor-pointer w-full md:w-auto">
+                    <option value="all">-- ทุกระดับชั้น --</option>
+                    <option value="ป.1">ป.1</option> <option value="ป.2">ป.2</option> <option value="ป.3">ป.3</option>
+                    <option value="ป.4">ป.4</option> <option value="ป.5">ป.5</option> <option value="ป.6">ป.6</option>
+                </select>
+                <select id="filterTerm" class="px-3 py-2 rounded-lg text-sm text-blue-900 font-bold outline-none cursor-pointer w-full md:w-auto">
+                    <option value="1/2569">ภาคเรียน 1/2569</option> <option value="2/2569">ภาคเรียน 2/2569</option>
+                </select>
+                <select id="filterMonth" class="px-3 py-2 rounded-lg text-sm text-blue-900 font-bold outline-none cursor-pointer w-full md:w-auto">
+                    <option value="พฤษภาคม">พฤษภาคม</option> <option value="มิถุนายน">มิถุนายน</option> <option value="กรกฎาคม">กรกฎาคม</option> <option value="สิงหาคม">สิงหาคม</option> <option value="กันยายน">กันยายน</option>
+                    <option value="ตุลาคม">ตุลาคม</option> <option value="พฤศจิกายน">พฤศจิกายน</option> <option value="ธันวาคม">ธันวาคม</option> <option value="มกราคม">มกราคม</option> <option value="กุมภาพันธ์">กุมภาพันธ์</option> <option value="มีนาคม">มีนาคม</option>
+                </select>
+                <button onclick="fetchDashboardData()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-bold shadow transition shrink-0"><i class="fa-solid fa-search"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="stat-card flex flex-col justify-center items-center text-center">
+                <h2 class="text-sm font-bold text-gray-500 uppercase mb-2">ความคืบหน้าการบันทึกข้อมูล</h2>
+                <div class="text-6xl font-black text-blue-600 mb-2" id="overallPercent">0.00%</div>
+                <div class="text-gray-600 font-medium text-sm">
+                    บันทึกแล้ว <span id="overallRecorded" class="font-bold text-gray-900 text-lg">0</span> จาก <span id="overallTotal" class="font-bold text-gray-900 text-lg">0</span> คน
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 mt-4 overflow-hidden shadow-inner">
+                    <div id="overallProgressBar" class="bg-gradient-to-r from-blue-400 to-blue-600 h-full transition-all duration-1000" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <h2 class="text-sm font-bold text-gray-500 uppercase text-center mb-4">สถานะการอ่าน (ภาพรวม)</h2>
+                <div class="relative h-40 w-full mb-4"><canvas id="readPieChart"></canvas></div>
+                <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-bold text-gray-600" id="readPieLegends"></div>
+            </div>
+
+            <div class="stat-card">
+                <h2 class="text-sm font-bold text-gray-500 uppercase text-center mb-4">สถานะการเขียน (ภาพรวม)</h2>
+                <div class="relative h-40 w-full mb-4"><canvas id="writePieChart"></canvas></div>
+                <div class="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-bold text-gray-600" id="writePieLegends"></div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h2 class="section-header"><i class="fa-solid fa-school"></i> ข้อมูลจำแนกตามห้องเรียน</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left whitespace-nowrap">
+                    <thead class="text-[11px] text-gray-700 bg-blue-50 border-b-2 border-blue-200">
+                        <tr>
+                            <th rowspan="2" class="px-2 py-3 rounded-tl-lg font-bold border-r border-blue-100 align-middle text-center">ห้องเรียน</th>
+                            <th rowspan="2" class="px-2 py-3 text-center border-r border-blue-100 align-middle">การบันทึก (%)</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-blue-100">การอ่านออก</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center rounded-tr-lg">การเขียนได้</th>
+                        </tr>
+                        <tr>
+                            <th class="px-2 py-1.5 text-center bg-green-50"><span class="bg-fluent text-white px-2 py-0.5 rounded">อ่านคล่อง</span></th>
+                            <th class="px-2 py-1.5 text-center bg-blue-50"><span class="bg-pass text-white px-2 py-0.5 rounded">อ่านได้</span></th>
+                            <th class="px-2 py-1.5 text-center bg-red-50 border-r border-blue-100"><span class="bg-fail text-white px-2 py-0.5 rounded">อ่านไม่ได้</span></th>
+                            
+                            <th class="px-2 py-1.5 text-center bg-green-50"><span class="bg-fluent text-white px-2 py-0.5 rounded">เขียนคล่อง</span></th>
+                            <th class="px-2 py-1.5 text-center bg-blue-50"><span class="bg-pass text-white px-2 py-0.5 rounded">เขียนได้</span></th>
+                            <th class="px-2 py-1.5 text-center bg-red-50"><span class="bg-fail text-white px-2 py-0.5 rounded">เขียนไม่ได้</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomTableBody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzTh56DQWZ5J2pcrUFFgv9qF_vYISHAooCny1JADySXvtZv_AZ2NXyiJ82eIv3rncTcZQ/exec";
+        
+        let globalDashboardData = null; 
+        let readPieChartInstance = null;
+        let writePieChartInstance = null;
+
+        const literacyColors = ['#22c55e', '#3b82f6', '#ef4444']; // เขียว(คล่อง), น้ำเงิน(ได้), แดง(ไม่ได้)
+        const readLabels = ['อ่านคล่อง', 'อ่านได้', 'อ่านไม่ได้'];
+        const writeLabels = ['เขียนคล่อง', 'เขียนได้', 'เขียนไม่ได้'];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const now = new Date();
+            const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            document.getElementById('filterMonth').value = months[now.getMonth()];
+            
+            const currentYearBE = now.getFullYear() + 543;
+            const m = now.getMonth(); 
+            let term = (m >= 4 && m <= 9) ? "1/" + currentYearBE : "2/" + ((m <= 3) ? currentYearBE - 1 : currentYearBE);
+            document.getElementById('filterTerm').value = term;
+
+            fetchDashboardData();
+        });
+
+        function fetchDashboardData() {
+            const term = document.getElementById('filterTerm').value;
+            const month = document.getElementById('filterMonth').value;
+            Swal.fire({ title: 'กำลังวิเคราะห์ข้อมูล...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            fetch(GAS_WEB_APP_URL, { method: 'POST', body: JSON.stringify({ action: "getLiteracyDashboardData", term: term, month: month }), headers: { 'Content-Type': 'text/plain;charset=utf-8' } })
+            .then(res => res.json())
+            .then(result => {
+                Swal.close();
+                if (result.status === 'success') { globalDashboardData = result; applyGradeFilter(); } 
+                else { Swal.fire('ข้อผิดพลาด', result.message, 'error'); }
+            }).catch(err => { Swal.fire('Error', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error'); });
+        }
+
+        function applyGradeFilter() {
+            if (!globalDashboardData) return;
+            const grade = document.getElementById('filterGrade').value;
+            const data = globalDashboardData;
+
+            if (grade === "all") {
+                renderOverall(data); renderRoomTable(data.roomStats); return;
+            }
+
+            let aggTotalStudents = 0; let aggRecordedTotal = 0;
+            let aggOverallRead = { "อ่านคล่อง": 0, "อ่านได้": 0, "อ่านไม่ได้": 0 };
+            let aggOverallWrite = { "เขียนคล่อง": 0, "เขียนได้": 0, "เขียนไม่ได้": 0 };
+            let filteredRoomStats = {};
+
+            for (let room in data.roomStats) {
+                if (room.startsWith(grade)) {
+                    filteredRoomStats[room] = data.roomStats[room];
+                    aggTotalStudents += data.roomStats[room].total;
+                    aggRecordedTotal += data.roomStats[room].recorded;
+                    const rRead = data.roomStats[room].read;
+                    for (let k in rRead) aggOverallRead[k] += rRead[k];
+                    const rWrite = data.roomStats[room].write;
+                    for (let k in rWrite) aggOverallWrite[k] += rWrite[k];
+                }
+            }
+            let filteredData = { totalStudents: aggTotalStudents, recordedTotal: aggRecordedTotal, overallRead: aggOverallRead, overallWrite: aggOverallWrite };
+            renderOverall(filteredData); renderRoomTable(filteredRoomStats);
+        }
+
+        function renderOverall(data) {
+            const percent = data.totalStudents > 0 ? ((data.recordedTotal / data.totalStudents) * 100).toFixed(2) : "0.00";
+            document.getElementById('overallPercent').innerText = percent + "%";
+            document.getElementById('overallRecorded').innerText = data.recordedTotal;
+            document.getElementById('overallTotal').innerText = data.totalStudents;
+            document.getElementById('overallProgressBar').style.width = percent + "%";
+
+            // กราฟการอ่าน
+            const readData = [data.overallRead["อ่านคล่อง"], data.overallRead["อ่านได้"], data.overallRead["อ่านไม่ได้"]];
+            const ctxRead = document.getElementById('readPieChart').getContext('2d');
+            if(readPieChartInstance) readPieChartInstance.destroy();
+            readPieChartInstance = new Chart(ctxRead, {
+                type: 'doughnut',
+                data: { labels: readLabels, datasets: [{ data: readData, backgroundColor: literacyColors, borderWidth: 2, borderColor: '#ffffff' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '65%' }
+            });
+
+            // กราฟการเขียน
+            const writeData = [data.overallWrite["เขียนคล่อง"], data.overallWrite["เขียนได้"], data.overallWrite["เขียนไม่ได้"]];
+            const ctxWrite = document.getElementById('writePieChart').getContext('2d');
+            if(writePieChartInstance) writePieChartInstance.destroy();
+            writePieChartInstance = new Chart(ctxWrite, {
+                type: 'doughnut',
+                data: { labels: writeLabels, datasets: [{ data: writeData, backgroundColor: literacyColors, borderWidth: 2, borderColor: '#ffffff' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '65%' }
+            });
+
+            const calcP = (val) => data.recordedTotal > 0 ? ((val/data.recordedTotal)*100).toFixed(2) : "0.00";
+            
+            document.getElementById('readPieLegends').innerHTML = `
+                <div class="flex items-center"><div class="w-3 h-3 bg-fluent rounded-full mr-1"></div>คล่อง: ${readData[0]} (${calcP(readData[0])}%)</div>
+                <div class="flex items-center"><div class="w-3 h-3 bg-pass rounded-full mr-1"></div>ได้: ${readData[1]} (${calcP(readData[1])}%)</div>
+                <div class="flex items-center"><div class="w-3 h-3 bg-fail rounded-full mr-1"></div>ไม่ได้: ${readData[2]} (${calcP(readData[2])}%)</div>
+            `;
+            
+            document.getElementById('writePieLegends').innerHTML = `
+                <div class="flex items-center"><div class="w-3 h-3 bg-fluent rounded-full mr-1"></div>คล่อง: ${writeData[0]} (${calcP(writeData[0])}%)</div>
+                <div class="flex items-center"><div class="w-3 h-3 bg-pass rounded-full mr-1"></div>ได้: ${writeData[1]} (${calcP(writeData[1])}%)</div>
+                <div class="flex items-center"><div class="w-3 h-3 bg-fail rounded-full mr-1"></div>ไม่ได้: ${writeData[2]} (${calcP(writeData[2])}%)</div>
+            `;
+        }
+
+        function renderRoomTable(roomStats) {
+            const tbody = document.getElementById('roomTableBody');
+            tbody.innerHTML = '';
+            const sortedRooms = Object.keys(roomStats).sort();
+
+            if (sortedRooms.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-400 font-bold">ไม่พบข้อมูลห้องเรียนในระดับชั้นนี้</td></tr>`; return;
+            }
+
+            sortedRooms.forEach(room => {
+                const stat = roomStats[room];
+                const percent = stat.total > 0 ? ((stat.recorded / stat.total) * 100).toFixed(2) : "0.00";
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-2 py-3 font-bold text-gray-800 text-center border-r border-blue-50">${room}</td>
+                    <td class="px-2 py-3 text-center border-r border-blue-50">
+                        <div class="flex items-center justify-center gap-2" title="${stat.recorded} / ${stat.total} คน">
+                            <div class="w-16 bg-gray-200 rounded-full h-2 overflow-hidden"><div class="bg-blue-500 h-full" style="width: ${percent}%"></div></div>
+                            <span class="text-xs font-bold ${parseFloat(percent) === 100 ? 'text-green-600' : 'text-gray-500'}">${percent}%</span>
+                        </div>
+                    </td>
+                    <td class="px-2 py-3 text-center font-bold color-fluent">${stat.read["อ่านคล่อง"] > 0 ? stat.read["อ่านคล่อง"] : '-'}</td>
+                    <td class="px-2 py-3 text-center font-bold color-pass">${stat.read["อ่านได้"] > 0 ? stat.read["อ่านได้"] : '-'}</td>
+                    <td class="px-2 py-3 text-center font-bold color-fail border-r border-blue-50">${stat.read["อ่านไม่ได้"] > 0 ? stat.read["อ่านไม่ได้"] : '-'}</td>
+                    
+                    <td class="px-2 py-3 text-center font-bold color-fluent">${stat.write["เขียนคล่อง"] > 0 ? stat.write["เขียนคล่อง"] : '-'}</td>
+                    <td class="px-2 py-3 text-center font-bold color-pass">${stat.write["เขียนได้"] > 0 ? stat.write["เขียนได้"] : '-'}</td>
+                    <td class="px-2 py-3 text-center font-bold color-fail">${stat.write["เขียนไม่ได้"] > 0 ? stat.write["เขียนไม่ได้"] : '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
