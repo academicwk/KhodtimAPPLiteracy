@@ -267,52 +267,55 @@
                 return;
             }
 
-            Swal.fire({ title: 'กำลังประมวลผลเอกสาร...', html: 'ระบบกำลังเชื่อมต่อกับ Google Docs <br>อาจใช้เวลา 5-10 วินาที', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            Swal.fire({ 
+                title: 'กำลังประมวลผลเอกสาร...', 
+                html: 'ระบบกำลังเชื่อมต่อกับ Google Docs <br>อาจใช้เวลา 10-15 วินาที', 
+                allowOutsideClick: false, 
+                didOpen: () => { Swal.showLoading() } 
+            });
 
-            // 1. ดึงข้อมูลตัวเลขสรุป
-            const term = document.getElementById('filterTerm').value;
-            const month = document.getElementById('filterMonth').value;
-            const grade = document.getElementById('filterGrade').value;
-            
-            const payload = {
-                action: "exportPDF",
-                period: `ประจำเดือน${month} ภาคเรียนที่ ${term}`,
-                scope: grade === 'all' ? 'ทุกระดับชั้น (ป.1 - ป.6)' : `ระดับชั้น ${grade}`,
-                recorded: document.getElementById('overallRecorded').innerText,
-                total: document.getElementById('overallTotal').innerText,
-                percent: document.getElementById('overallPercent').innerText,
-                tableRows: []
-            };
-
-            // 2. ดึงข้อมูลจากตาราง (ลบพวกโค้ดสี/HTML ออกให้เหลือแต่ Text บริสุทธิ์)
-            const sourceRows = document.querySelectorAll('#roomTableBody tr');
-            if (sourceRows.length > 0 && !sourceRows[0].innerText.includes('ไม่พบข้อมูล')) {
-                sourceRows.forEach(row => {
-                    const cells = row.querySelectorAll('td');
-                    let rowData = [];
-                    cells.forEach((cell, index) => {
-                        let text = cell.innerText.replace(/[\n\r]+/g, ' ').trim();
-                        // ดึงเฉพาะตัวเลขจากช่องความคืบหน้า (เปอร์เซ็นต์)
-                        if(index === 1) text = text.match(/[\d.]+%/) ? text.match(/[\d.]+%/)[0] : text;
-                        // ลบวงเล็บเปอร์เซ็นต์ในช่องคะแนนออก เพื่อไม่ให้ตารางใน Docs แน่นเกินไป
-                        if(index >= 2 && text.includes('(')) text = text.split(' ')[0]; 
-                        rowData.push(text);
-                    });
-                    payload.tableRows.push(rowData);
-                });
-            }
-
-            // 3. ส่งข้อมูลไปที่ Apps Script
             try {
+                // 1. ดึงข้อมูลตัวเลขสรุป
+                const term = document.getElementById('filterTerm').value;
+                const month = document.getElementById('filterMonth').value;
+                const grade = document.getElementById('filterGrade').value;
+                
+                const payload = {
+                    action: "exportPDF",
+                    period: `ประจำเดือน${month} ภาคเรียนที่ ${term}`,
+                    scope: grade === 'all' ? 'ทุกระดับชั้น (ป.1 - ป.6)' : `ระดับชั้น ${grade}`,
+                    recorded: document.getElementById('overallRecorded').innerText,
+                    total: document.getElementById('overallTotal').innerText,
+                    percent: document.getElementById('overallPercent').innerText,
+                    tableRows: []
+                };
+
+                // 2. ดึงข้อมูลจากตาราง 
+                const sourceRows = document.querySelectorAll('#roomTableBody tr');
+                if (sourceRows.length > 0 && !sourceRows[0].innerText.includes('ไม่พบข้อมูล')) {
+                    sourceRows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        let rowData = [];
+                        cells.forEach((cell, index) => {
+                            let text = cell.innerText.replace(/[\n\r]+/g, ' ').trim();
+                            if(index === 1) text = text.match(/[\d.]+%/) ? text.match(/[\d.]+%/)[0] : text;
+                            if(index >= 2 && text.includes('(')) text = text.split(' ')[0]; 
+                            rowData.push(text);
+                        });
+                        payload.tableRows.push(rowData);
+                    });
+                }
+
+                // 3. ส่งข้อมูลไปที่ Apps Script
                 const response = await fetch(GAS_WEB_APP_URL, { 
                     method: 'POST', 
                     body: JSON.stringify(payload), 
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' } 
                 });
+                
                 const result = await response.json();
                 
                 if (result.status === "success") {
-                    // ดาวน์โหลดไฟล์จาก Base64 String
                     const link = document.createElement('a');
                     link.href = 'data:application/pdf;base64,' + result.base64;
                     link.download = result.filename;
@@ -322,10 +325,11 @@
                     
                     Swal.fire({ icon: 'success', title: 'สำเร็จ!', text: 'สร้างรายงาน PDF เรียบร้อยแล้ว', timer: 2000, showConfirmButton: false });
                 } else {
-                    Swal.fire('ข้อผิดพลาด', result.message, 'error');
+                    // แสดงข้อความ Error จากฝั่งเซิร์ฟเวอร์
+                    Swal.fire('ข้อผิดพลาดจากระบบ', result.message, 'error');
                 }
             } catch (error) {
-                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', 'error');
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ หรือใช้เวลาประมวลผลนานเกินไป', 'error');
             }
         }
     </script>
