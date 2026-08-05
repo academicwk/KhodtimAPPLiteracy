@@ -8,6 +8,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <!-- เพิ่มไลบรารีสร้าง PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
@@ -46,6 +48,9 @@
                     <option value="ตุลาคม">ตุลาคม</option> <option value="พฤศจิกายน">พฤศจิกายน</option> <option value="ธันวาคม">ธันวาคม</option> <option value="มกราคม">มกราคม</option> <option value="กุมภาพันธ์">กุมภาพันธ์</option> <option value="มีนาคม">มีนาคม</option>
                 </select>
                 <button onclick="fetchDashboardData()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-bold shadow transition shrink-0"><i class="fa-solid fa-search"></i></button>
+                <button onclick="exportToPDF()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow transition shrink-0 flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> ออกรายงาน
+                </button>
             </div>
         </div>
     </div>
@@ -255,6 +260,148 @@
                 tbody.appendChild(tr);
             });
         }
+
+        // --- ฟังก์ชันสำหรับการสร้างและดาวน์โหลดรายงาน PDF ---
+        function exportToPDF() {
+            if (!globalDashboardData) {
+                Swal.fire('แจ้งเตือน', 'กรุณารอข้อมูลโหลดให้เสร็จก่อน', 'warning');
+                return;
+            }
+
+            Swal.fire({ title: 'กำลังสร้างไฟล์รายงาน...', html: 'กรุณารอสักครู่ ระบบกำลังจัดหน้ากระดาษ A4', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+
+            // ดึงข้อมูลส่วนหัวมาใส่ฟอร์ม
+            const term = document.getElementById('filterTerm').value;
+            const month = document.getElementById('filterMonth').value;
+            const grade = document.getElementById('filterGrade').value;
+            
+            document.getElementById('pdf-period').innerText = `ประจำเดือน${month} ภาคเรียนที่ ${term}`;
+            document.getElementById('pdf-grade-scope').innerText = grade === 'all' ? 'ทุกระดับชั้น (ป.1 - ป.6)' : `เฉพาะระดับชั้น ${grade}`;
+            
+            // ดึงสรุปตัวเลข
+            document.getElementById('pdf-recorded').innerText = document.getElementById('overallRecorded').innerText;
+            document.getElementById('pdf-total').innerText = document.getElementById('overallTotal').innerText;
+            document.getElementById('pdf-percent').innerText = document.getElementById('overallPercent').innerText;
+
+            // คัดลอกและแปลงรูปแบบตารางให้เหมาะกับการพิมพ์
+            const pdfTbody = document.getElementById('pdf-table-body');
+            pdfTbody.innerHTML = '';
+            
+            const sourceRows = document.querySelectorAll('#roomTableBody tr');
+            if (sourceRows.length === 0 || (sourceRows.length === 1 && sourceRows[0].innerText.includes('ไม่พบข้อมูล'))) {
+                pdfTbody.innerHTML = `<tr><td colspan="8" class="border border-gray-800 py-4 text-center">ไม่มีข้อมูลสำหรับการส่งออก</td></tr>`;
+            } else {
+                sourceRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    const newRow = document.createElement('tr');
+                    
+                    let rowHtml = '';
+                    cells.forEach((cell, index) => {
+                        // ตัด tag html ออกเพื่อเอาเฉพาะตัวเลข เช่น จาก 12 (100%) เหลือแค่ 12 (100%) บรรทัดเดียว
+                        let text = cell.innerText.replace(/[\n\r]+/g, ' ').trim();
+                        // คอลัมน์แถบเปอร์เซ็นต์ ให้ดึงเฉพาะตัวเลขมาแสดง
+                        if(index === 1) text = text.match(/[\d.]+%/) ? text.match(/[\d.]+%/)[0] : text;
+                        
+                        let colorClass = "text-gray-800";
+                        if (index >= 2 && text !== '-') {
+                            if (index === 2 || index === 5) colorClass = "text-green-700";
+                            else if (index === 3 || index === 6) colorClass = "text-blue-700";
+                            else if (index === 4 || index === 7) colorClass = "text-red-700";
+                        }
+
+                        rowHtml += `<td class="border border-gray-800 py-1.5 font-bold ${colorClass}">${text}</td>`;
+                    });
+                    newRow.innerHTML = rowHtml;
+                    pdfTbody.appendChild(newRow);
+                });
+            }
+
+            // ประมวลผลและดาวน์โหลด PDF
+            const element = document.getElementById('pdf-content');
+            const container = document.getElementById('pdf-container');
+            container.classList.remove('hidden'); // แสดงขึ้นมาแวบเดียวเพื่อให้ระบบวาดรูป
+
+            const opt = {
+                margin:       0,
+                filename:     `รายงานการอ่านเขียน_${grade}_${month}_${term.replace('/', '-')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, // เพิ่มความคมชัดเป็น 2 เท่า
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                container.classList.add('hidden'); // ซ่อนกลับไปเมื่อเสร็จ
+                Swal.fire({ icon: 'success', title: 'ดาวน์โหลดสำเร็จ!', text: 'ไฟล์รายงาน PDF ถูกบันทึกลงเครื่องของคุณแล้ว', timer: 2000, showConfirmButton: false });
+            }).catch(err => {
+                container.classList.add('hidden');
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถสร้างไฟล์ PDF ได้', 'error');
+            });
+        }
     </script>
+
+    <!-- PDF Template (ซ่อนไว้เสมอ จะแสดงเฉพาะตอนที่โค้ดสั่งประมวลผล PDF เท่านั้น) -->
+    <div id="pdf-container" class="hidden fixed inset-0 z-[-1] overflow-hidden bg-white flex justify-center">
+        <!-- ตั้งค่าความกว้างและความสูงเป็น A4 พอดี (210mm x 297mm) -->
+        <div id="pdf-content" class="bg-white text-black" style="width: 210mm; min-height: 297mm; padding: 20mm 15mm; box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+            
+            <!-- ส่วนหัวรายงาน -->
+            <div class="flex flex-col items-center mb-6">
+                <img src="https://img2.pic.in.th/4d3a830f3eb506411.png" class="w-22 h-22 mb-3 object-contain">
+                <h2 class="text-xl font-bold mb-1">แบบสรุปผลการประเมินการอ่านออกเขียนได้</h2>
+                <h3 class="text-lg font-bold mb-1">โรงเรียนเทศบาลวัดโขดทิมทาราม</h3>
+                <p class="text-sm text-gray-800">สังกัดกองการศึกษา เทศบาลนครระยอง</p>
+                <p class="text-sm mt-3 font-bold bg-gray-100 px-4 py-1 rounded-full border border-gray-300" id="pdf-period">ประจำเดือน...</p>
+            </div>
+
+            <!-- สรุปตัวเลข -->
+            <div class="mb-4 text-[13px] flex justify-between items-end border-b-2 border-gray-800 pb-2">
+                <div>
+                    <span class="font-bold text-gray-700">ขอบเขตข้อมูล: </span> <span id="pdf-grade-scope" class="font-bold"></span>
+                </div>
+                <div>
+                    <span class="font-bold text-gray-700">จำนวนนักเรียนที่ประเมินแล้ว: </span> 
+                    <span id="pdf-recorded" class="text-blue-600 font-bold"></span> / <span id="pdf-total" class="font-bold"></span> คน (<span id="pdf-percent"></span>)
+                </div>
+            </div>
+
+            <!-- ตารางข้อมูล -->
+            <table class="w-full text-[11px] border-collapse border border-gray-800 text-center mb-8">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th rowspan="2" class="border border-gray-800 py-2">ห้องเรียน</th>
+                        <th rowspan="2" class="border border-gray-800 py-2">ความคืบหน้า</th>
+                        <th colspan="3" class="border border-gray-800 py-1">การอ่านออก</th>
+                        <th colspan="3" class="border border-gray-800 py-1">การเขียนได้</th>
+                    </tr>
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-800 py-1">อ่านคล่อง</th>
+                        <th class="border border-gray-800 py-1">อ่านได้</th>
+                        <th class="border border-gray-800 py-1">อ่านไม่ได้</th>
+                        <th class="border border-gray-800 py-1">เขียนคล่อง</th>
+                        <th class="border border-gray-800 py-1">เขียนได้</th>
+                        <th class="border border-gray-800 py-1">เขียนไม่ได้</th>
+                    </tr>
+                </thead>
+                <tbody id="pdf-table-body">
+                    <!-- ข้อมูลจะถูกดึงจากตารางหลักมาใส่ที่นี่อัตโนมัติ -->
+                </tbody>
+            </table>
+
+            <!-- ส่วนของการลงนาม -->
+            <div class="mt-auto pt-10 flex justify-between text-center px-10 text-[13px]">
+                <div class="flex flex-col items-center">
+                    <p class="mb-12">ลงชื่อ................................................ผู้รายงาน</p>
+                    <p class="font-bold">(นายพีระศิน ไชยศร)</p>
+                    <p class="text-gray-700 mt-1">หัวหน้ากลุ่มงานหลักสูตรฯ</p>
+                </div>
+                <div class="flex flex-col items-center">
+                    <p class="mb-12">ลงชื่อ................................................ผู้รับรอง</p>
+                    <p class="font-bold">(นายธนพงษ์ สุขะ)</p>
+                    <p class="text-gray-700 mt-1">ผู้อำนวยการสถานศึกษา</p>
+                </div>
+            </div>
+            
+        </div>
+    </div>
 </body>
 </html>
