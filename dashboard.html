@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -309,7 +309,7 @@
                             else if (index === 4 || index === 7) colorClass = "text-red-700";
                         }
 
-                        rowHtml += `<td class="border border-gray-800 py-1.5 font-bold ${colorClass}">${text}</td>`;
+                        rowHtml += `<td class="border border-gray-800 py-0.5 px-1 font-bold text-[10.5px] ${colorClass}">${text}</td>`;
                     });
                     newRow.innerHTML = rowHtml;
                     pdfTbody.appendChild(newRow);
@@ -340,21 +340,22 @@
     </script>
 
     <!-- PDF Template (ซ่อนไว้เสมอ จะแสดงเฉพาะตอนที่โค้ดสั่งประมวลผล PDF เท่านั้น) -->
+    <!-- PDF Template (ซ่อนไว้เสมอ จะแสดงเฉพาะตอนที่โค้ดสั่งประมวลผล PDF เท่านั้น) -->
     <div id="pdf-container" class="hidden fixed inset-0 z-[-1] overflow-hidden bg-white flex justify-center">
-        <!-- ตั้งค่าความกว้างและความสูงเป็น A4 พอดี (210mm x 297mm) -->
-        <div id="pdf-content" class="bg-white text-black" style="width: 210mm; min-height: 297mm; padding: 20mm 15mm; box-sizing: border-box; font-family: 'Sarabun', sans-serif;">
+        <!-- บังคับความสูงตายตัวที่ 297mm และลด Padding ขอบกระดาษลง -->
+        <div id="pdf-content" class="bg-white text-black flex flex-col" style="width: 210mm; height: 297mm; padding: 12mm 15mm; box-sizing: border-box; font-family: 'Sarabun', sans-serif; overflow: hidden;">
             
-            <!-- ส่วนหัวรายงาน -->
-            <div class="flex flex-col items-center mb-6">
-                <img src="https://img2.pic.in.th/4d3a830f3eb506411.png" class="w-22 h-22 mb-3 object-contain">
-                <h2 class="text-xl font-bold mb-1">แบบสรุปผลการประเมินการอ่านออกเขียนได้</h2>
-                <h3 class="text-lg font-bold mb-1">โรงเรียนเทศบาลวัดโขดทิมทาราม</h3>
-                <p class="text-sm text-gray-800">สังกัดกองการศึกษา เทศบาลนครระยอง</p>
-                <p class="text-sm mt-3 font-bold bg-gray-100 px-4 py-1 rounded-full border border-gray-300" id="pdf-period">ประจำเดือน...</p>
+            <!-- ส่วนหัวรายงาน (ย่อขนาดโลโก้และช่องไฟ) -->
+            <div class="flex flex-col items-center mb-2">
+                <img src="https://img2.pic.in.th/4d3a830f3eb506411.png" class="w-16 h-16 mb-1 object-contain">
+                <h2 class="text-[18px] font-bold mb-0.5">แบบสรุปผลการประเมินการอ่านออกเขียนได้</h2>
+                <h3 class="text-[16px] font-bold mb-0.5">โรงเรียนเทศบาลวัดโขดทิมทาราม</h3>
+                <p class="text-[12px] text-gray-800">สังกัดกองการศึกษา เทศบาลนครระยอง</p>
+                <p class="text-[12px] mt-1.5 font-bold bg-gray-100 px-4 py-0.5 rounded-full border border-gray-300" id="pdf-period">ประจำเดือน...</p>
             </div>
 
-            <!-- สรุปตัวเลข -->
-            <div class="mb-4 text-[13px] flex justify-between items-end border-b-2 border-gray-800 pb-2">
+            <!-- สรุปตัวเลข (ลดช่องไฟ) -->
+            <div class="mb-2 text-[12px] flex justify-between items-end border-b-2 border-gray-800 pb-1.5">
                 <div>
                     <span class="font-bold text-gray-700">ขอบเขตข้อมูล: </span> <span id="pdf-grade-scope" class="font-bold"></span>
                 </div>
@@ -364,22 +365,22 @@
                 </div>
             </div>
 
-            <!-- ตารางข้อมูล -->
-            <table class="w-full text-[11px] border-collapse border border-gray-800 text-center mb-8">
+            <!-- ตารางข้อมูล (ลดช่องไฟหัวตาราง) -->
+            <table class="w-full text-[10.5px] border-collapse border border-gray-800 text-center mb-2">
                 <thead>
                     <tr class="bg-gray-200">
-                        <th rowspan="2" class="border border-gray-800 py-2">ห้องเรียน</th>
-                        <th rowspan="2" class="border border-gray-800 py-2">ความคืบหน้า</th>
-                        <th colspan="3" class="border border-gray-800 py-1">การอ่านออก</th>
-                        <th colspan="3" class="border border-gray-800 py-1">การเขียนได้</th>
+                        <th rowspan="2" class="border border-gray-800 py-1">ห้องเรียน</th>
+                        <th rowspan="2" class="border border-gray-800 py-1">ความคืบหน้า</th>
+                        <th colspan="3" class="border border-gray-800 py-0.5">การอ่านออก</th>
+                        <th colspan="3" class="border border-gray-800 py-0.5">การเขียนได้</th>
                     </tr>
                     <tr class="bg-gray-100">
-                        <th class="border border-gray-800 py-1">อ่านคล่อง</th>
-                        <th class="border border-gray-800 py-1">อ่านได้</th>
-                        <th class="border border-gray-800 py-1">อ่านไม่ได้</th>
-                        <th class="border border-gray-800 py-1">เขียนคล่อง</th>
-                        <th class="border border-gray-800 py-1">เขียนได้</th>
-                        <th class="border border-gray-800 py-1">เขียนไม่ได้</th>
+                        <th class="border border-gray-800 py-0.5">อ่านคล่อง</th>
+                        <th class="border border-gray-800 py-0.5">อ่านได้</th>
+                        <th class="border border-gray-800 py-0.5">อ่านไม่ได้</th>
+                        <th class="border border-gray-800 py-0.5">เขียนคล่อง</th>
+                        <th class="border border-gray-800 py-0.5">เขียนได้</th>
+                        <th class="border border-gray-800 py-0.5">เขียนไม่ได้</th>
                     </tr>
                 </thead>
                 <tbody id="pdf-table-body">
@@ -387,17 +388,17 @@
                 </tbody>
             </table>
 
-            <!-- ส่วนของการลงนาม -->
-            <div class="mt-auto pt-10 flex justify-between text-center px-10 text-[13px]">
+            <!-- ส่วนของการลงนาม (ใช้ mt-auto เพื่อดันลงล่างสุด และลดช่องไฟเซ็นชื่อ) -->
+            <div class="mt-auto flex justify-between text-center px-12 text-[12px] pb-2">
                 <div class="flex flex-col items-center">
-                    <p class="mb-12">ลงชื่อ................................................ผู้รายงาน</p>
+                    <p class="mb-8">ลงชื่อ................................................ผู้รายงาน</p>
                     <p class="font-bold">(นายพีระศิน ไชยศร)</p>
-                    <p class="text-gray-700 mt-1">หัวหน้ากลุ่มงานหลักสูตรฯ</p>
+                    <p class="text-gray-700 mt-0.5">หัวหน้ากลุ่มงานหลักสูตรฯ</p>
                 </div>
                 <div class="flex flex-col items-center">
-                    <p class="mb-12">ลงชื่อ................................................ผู้รับรอง</p>
+                    <p class="mb-8">ลงชื่อ................................................ผู้รับรอง</p>
                     <p class="font-bold">(นายธนพงษ์ สุขะ)</p>
-                    <p class="text-gray-700 mt-1">ผู้อำนวยการสถานศึกษา</p>
+                    <p class="text-gray-700 mt-0.5">ผู้อำนวยการสถานศึกษา</p>
                 </div>
             </div>
             
