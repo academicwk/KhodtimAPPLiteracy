@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
@@ -175,6 +176,9 @@
             document.getElementById('overallTotal').innerText = data.totalStudents;
             document.getElementById('overallProgressBar').style.width = percent + "%";
 
+            // เปิดใช้งานปลั๊กอินแสดงตัวเลขบนกราฟ
+            Chart.register(ChartDataLabels);
+
             // กราฟการอ่าน
             const readData = [data.overallRead["อ่านคล่อง"], data.overallRead["อ่านได้"], data.overallRead["อ่านไม่ได้"]];
             const ctxRead = document.getElementById('readPieChart').getContext('2d');
@@ -182,7 +186,7 @@
             readPieChartInstance = new Chart(ctxRead, {
                 type: 'doughnut',
                 data: { labels: readLabels, datasets: [{ data: readData, backgroundColor: literacyColors, borderWidth: 2, borderColor: '#ffffff' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '65%' }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#ffffff', font: { weight: 'bold', size: 14 }, formatter: (value) => value > 0 ? value : '' } }, cutout: '65%' }
             });
 
             // กราฟการเขียน
@@ -192,7 +196,7 @@
             writePieChartInstance = new Chart(ctxWrite, {
                 type: 'doughnut',
                 data: { labels: writeLabels, datasets: [{ data: writeData, backgroundColor: literacyColors, borderWidth: 2, borderColor: '#ffffff' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '65%' }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { color: '#ffffff', font: { weight: 'bold', size: 14 }, formatter: (value) => value > 0 ? value : '' } }, cutout: '65%' }
             });
 
             const calcP = (val) => data.recordedTotal > 0 ? ((val/data.recordedTotal)*100).toFixed(2) : "0.00";
@@ -223,22 +227,30 @@
                 const stat = roomStats[room];
                 const percent = stat.total > 0 ? ((stat.recorded / stat.total) * 100).toFixed(2) : "0.00";
                 
+                // ฟังก์ชันช่วยจัดรูปแบบข้อมูล แสดงผลจำนวน + (ร้อยละ)
+                const formatCell = (val) => {
+                    if (val > 0 && stat.recorded > 0) {
+                        return `${val} <br><span class="text-[10px] text-gray-400 font-normal">(${((val/stat.recorded)*100).toFixed(2)}%)</span>`;
+                    }
+                    return '-';
+                };
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="px-2 py-3 font-bold text-gray-800 text-center border-r border-blue-50">${room}</td>
-                    <td class="px-2 py-3 text-center border-r border-blue-50">
+                    <td class="px-2 py-3 font-bold text-gray-800 text-center border-r border-blue-50 align-middle">${room}</td>
+                    <td class="px-2 py-3 text-center border-r border-blue-50 align-middle">
                         <div class="flex items-center justify-center gap-2" title="${stat.recorded} / ${stat.total} คน">
                             <div class="w-16 bg-gray-200 rounded-full h-2 overflow-hidden"><div class="bg-blue-500 h-full" style="width: ${percent}%"></div></div>
                             <span class="text-xs font-bold ${parseFloat(percent) === 100 ? 'text-green-600' : 'text-gray-500'}">${percent}%</span>
                         </div>
                     </td>
-                    <td class="px-2 py-3 text-center font-bold color-fluent">${stat.read["อ่านคล่อง"] > 0 ? stat.read["อ่านคล่อง"] : '-'}</td>
-                    <td class="px-2 py-3 text-center font-bold color-pass">${stat.read["อ่านได้"] > 0 ? stat.read["อ่านได้"] : '-'}</td>
-                    <td class="px-2 py-3 text-center font-bold color-fail border-r border-blue-50">${stat.read["อ่านไม่ได้"] > 0 ? stat.read["อ่านไม่ได้"] : '-'}</td>
+                    <td class="px-2 py-3 text-center font-bold color-fluent align-middle">${formatCell(stat.read["อ่านคล่อง"])}</td>
+                    <td class="px-2 py-3 text-center font-bold color-pass align-middle">${formatCell(stat.read["อ่านได้"])}</td>
+                    <td class="px-2 py-3 text-center font-bold color-fail border-r border-blue-50 align-middle">${formatCell(stat.read["อ่านไม่ได้"])}</td>
                     
-                    <td class="px-2 py-3 text-center font-bold color-fluent">${stat.write["เขียนคล่อง"] > 0 ? stat.write["เขียนคล่อง"] : '-'}</td>
-                    <td class="px-2 py-3 text-center font-bold color-pass">${stat.write["เขียนได้"] > 0 ? stat.write["เขียนได้"] : '-'}</td>
-                    <td class="px-2 py-3 text-center font-bold color-fail">${stat.write["เขียนไม่ได้"] > 0 ? stat.write["เขียนไม่ได้"] : '-'}</td>
+                    <td class="px-2 py-3 text-center font-bold color-fluent align-middle">${formatCell(stat.write["เขียนคล่อง"])}</td>
+                    <td class="px-2 py-3 text-center font-bold color-pass align-middle">${formatCell(stat.write["เขียนได้"])}</td>
+                    <td class="px-2 py-3 text-center font-bold color-fail align-middle">${formatCell(stat.write["เขียนไม่ได้"])}</td>
                 `;
                 tbody.appendChild(tr);
             });
